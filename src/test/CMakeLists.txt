@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
+add_subdirectory(googletest)
+
 include_directories(${GTEST_INCLUDE_DIRS})
 
 set(GOOGLETEST_SOURCES

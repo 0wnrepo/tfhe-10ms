@@ -1,19 +1,19 @@
 	.file	"spqlios-fft-avx.s"
-	.section	.text.unlikely,"ax",@progbits
-.LCOLDB0:
 	.text
-.LHOTB0:
-	.p2align 4,,15
+	.p2align 4
+#if !__APPLE__
 	.globl	fft
 	.type	fft, @function
 fft:
-.LFB0:
-	.cfi_startproc
+#else
+	.globl	_fft
+_fft:
+#endif
 //c has size n/2
 //void fft(const void* tables, double* c) {
 
 //    FFT_PRECOMP* fft_tables = (FFT_PRECOMP*) tables;
-//    const int n = fft_tables->n;
+//    const int32_t n = fft_tables->n;
 //    const double* trig_tables = fft_tables->trig_tables;
 
 	/* Save registers */
@@ -29,10 +29,10 @@ fft:
 	movq        %rsi, %rdi      /* rdi: base of the real data CONSTANT */
 	
 	/* Load struct FftTables fields */
-	movq         0(%rax), %rdx  /* rdx: n (logical Size of FFT  = a power of 2, must be at least 4) */
+	movq         0(%rax), %rdx  /* rdx: n (logical Size of _fft  = a power of 2, must be at least 4) */
 	movq         8(%rax), %r8   /* r8: Base address of trigonometric tables array (CONSTANT) */
 	
-//    int ns4 = n/4;
+//    int32_t ns4 = n/4;
 //    double* pre = c;     //size n/4
 //    double* pim = c+ns4; //size n/4
 	movq	%rdx, %r9
@@ -45,7 +45,7 @@ fft:
 //	//[1 -1]
 //	//     [1  1]
 //	//     [1 -1]
-//	for (int block=0; block<ns4; block+=4) {
+//	for (int32_t block=0; block<ns4; block+=4) {
 //	    double* d0 = pre+block;
 //	    double* d1 = pim+block;
 //	    tmp0[0]=d0[0];
@@ -68,10 +68,10 @@ fft:
 //	    add4(d1,tmp0,tmp1);
 //	}
 //    }
-	vmovapd     size4negation0, %ymm15
-	vmovapd     size4negation1, %ymm14
-	vmovapd     size4negation2, %ymm13
-	vmovapd     size4negation3, %ymm12
+	vmovapd     size4negation0(%rip), %ymm15
+	vmovapd     size4negation1(%rip), %ymm14
+	vmovapd     size4negation2(%rip), %ymm13
+	vmovapd     size4negation3(%rip), %ymm12
 	
 	movq	$0,%rax	/* rax: block */
 	movq	%rdi,%r10
@@ -105,7 +105,7 @@ fftsize2loop:
 //    // r0 - r2    i0 - i2
 //    // r1 - i3    i1 + r3
 //    {
-//	for (int block=0; block<ns4; block+=4) {
+//	for (int32_t block=0; block<ns4; block+=4) {
 //	    double* re = pre+block;
 //	    double* im = pim+block;
 //	    tmp0[0]=re[0];
@@ -155,10 +155,10 @@ fftsize4loop:
 //    
 //    //general loop
 //    const double* cur_tt = trig_tables;
-//    for (int halfnn=4; halfnn<ns4; halfnn*=2) {
-//	int nn = 2*halfnn;
-//	for (int block=0; block<ns4; block+=nn) {
-//	    for (int off=0; off<halfnn; off+=4) {
+//    for (int32_t halfnn=4; halfnn<ns4; halfnn*=2) {
+//	int32_t nn = 2*halfnn;
+//	for (int32_t block=0; block<ns4; block+=nn) {
+//	    for (int32_t off=0; off<halfnn; off+=4) {
 //		double* re0 = pre + block + off;
 //		double* im0 = pim + block + off;
 //		double* re1 = pre + block + halfnn + off;
@@ -234,7 +234,7 @@ fftoffloop:
 	jb ffthalfnnloop
 
 //    //multiply by omb^j
-//    for (int j=0; j<ns4; j+=4) {
+//    for (int32_t j=0; j<ns4; j+=4) {
 //	const double* r0 = cur_tt+2*j;
 //	const double* r1 = r0+4;
 //	//(re*cos-im*sin) + i (im*cos+re*sin)
@@ -292,13 +292,6 @@ size4negation1: .double +1.0, -1.0, -1.0, +1.0 /* ymm14 */
 size4negation2: .double +1.0, +1.0, -1.0, -1.0 /* ymm13 */
 size4negation3: .double +1.0, -1.0, +1.0, -1.0 /* ymm12 */
 
-	.cfi_endproc
-.LFE0:
+#if !__APPLE__
 	.size	fft, .-fft
-	.section	.text.unlikely
-.LCOLDE0:
-	.text
-.LHOTE0:
-	.ident	"GCC: (Ubuntu 5.2.1-22ubuntu2) 5.2.1 20151010"
-	.section	.note.GNU-stack,"",@progbits
-
+#endif
